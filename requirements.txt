@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+openai
+langgraph
+langsmith
+sqlalchemy
+streamlit
+python-dotenv
+requests
