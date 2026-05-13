@@ -23,7 +23,7 @@ st.sidebar.subheader("Supported Tasks")
 
 try:
     tasks_response = requests.get(
-        "http://127.0.0.1:8000/tasks"
+        "https://ai-operations-agent-platform.onrender.com/tasks"
     )
 
     tasks = tasks_response.json()["supported_tasks"]
@@ -54,7 +54,7 @@ if page == "Manage Contacts":
     if st.button("Add Contact"):
 
         response = requests.post(
-            "http://127.0.0.1:8000/contacts",
+            "https://ai-operations-agent-platform.onrender.com/contacts",
             params={
                 "name": name,
                 "email": email
@@ -66,7 +66,7 @@ if page == "Manage Contacts":
     st.subheader("Saved Contacts")
 
     response = requests.get(
-        "http://127.0.0.1:8000/contacts"
+        "https://ai-operations-agent-platform.onrender.com/contacts"
     )
 
     contacts = response.json()["contacts"]
@@ -104,7 +104,7 @@ elif page == "Run Agent":
         else:
             try:
                 response = requests.post(
-                    "http://127.0.0.1:8000/run",
+                    "https://ai-operations-agent-platform.onrender.com/run",
                     params={"input_text": user_input}
                 )
 
