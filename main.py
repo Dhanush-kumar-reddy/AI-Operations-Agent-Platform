@@ -41,8 +41,10 @@ async def run(input_text: str):
 
         print("CALLING AGENT")
 
-        # IMPORTANT FIX
-        result = run_agent(input_text)
+        # FIXED
+        result = await run_agent(
+            input_text
+        )
 
         print("AGENT FINISHED")
 
