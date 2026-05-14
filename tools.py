@@ -1,8 +1,6 @@
 import os
-import smtplib
 import ssl
-
-from email.mime.text import MIMEText
+import resend
 
 from dotenv import load_dotenv
 
@@ -22,8 +20,6 @@ EMAIL_USER = os.getenv("EMAIL_USER")
 EMAIL_PASS = os.getenv("EMAIL_PASS")
 
 
-# SEND EMAIL
-
 def send_email(person, content):
 
     db = SessionLocal()
@@ -32,11 +28,15 @@ def send_email(person, content):
 
         print("SEND EMAIL START")
 
-        if not EMAIL_USER or not EMAIL_PASS:
+        resend.api_key = os.getenv(
+            "RESEND_API_KEY"
+        )
+
+        if not resend.api_key:
 
             return (
                 "Email failed: "
-                "EMAIL_USER or EMAIL_PASS missing"
+                "Missing RESEND_API_KEY"
             )
 
         if not person:
@@ -75,44 +75,21 @@ def send_email(person, content):
             to_email
         )
 
-        msg = MIMEText(content)
+        params = {
+            "from": "onboarding@resend.dev",
+            "to": [to_email],
+            "subject": (
+                "AI Operations Agent Notification"
+            ),
+            "html": f"""
+            <div>
+                <h2>AI Operations Agent</h2>
+                <p>{content}</p>
+            </div>
+            """
+        }
 
-        msg["Subject"] = (
-            "AI Operations Agent Notification"
-        )
-
-        msg["From"] = EMAIL_USER
-
-        msg["To"] = to_email
-
-        context = ssl.create_default_context()
-
-        print("CONNECTING SMTP")
-
-        with smtplib.SMTP(
-            "smtp.gmail.com",
-            587,
-            timeout=20
-        ) as server:
-
-            server.ehlo()
-
-            server.starttls(
-                context=context
-            )
-
-            server.ehlo()
-
-            print("SMTP LOGIN")
-
-            server.login(
-                EMAIL_USER,
-                EMAIL_PASS
-            )
-
-            print("SENDING EMAIL")
-
-            server.send_message(msg)
+        resend.Emails.send(params)
 
         print("EMAIL SUCCESS")
 
@@ -133,7 +110,6 @@ def send_email(person, content):
     finally:
 
         db.close()
-
 
 # SCHEDULE MEETING
 
