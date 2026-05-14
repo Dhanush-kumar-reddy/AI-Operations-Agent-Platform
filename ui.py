@@ -39,7 +39,7 @@ try:
 
     tasks_response = requests.get(
         f"{BASE_URL}/tasks",
-        timeout=TIMEOUT
+        timeout=120
     )
 
     tasks = tasks_response.json()[
@@ -87,7 +87,7 @@ if page == "Manage Contacts":
                     "name": name,
                     "email": email
                 },
-                timeout=TIMEOUT
+                timeout=120
             )
 
             data = response.json()
@@ -116,7 +116,7 @@ if page == "Manage Contacts":
 
         response = requests.get(
             f"{BASE_URL}/contacts",
-            timeout=TIMEOUT
+            timeout=120
         )
 
         contacts = response.json()[
@@ -199,7 +199,7 @@ elif page == "Meetings":
 
         response = requests.get(
             f"{BASE_URL}/meetings",
-            timeout=TIMEOUT
+            timeout=120
         )
 
         meetings = response.json()[
@@ -265,7 +265,7 @@ elif page == "Run Agent":
                     params={
                         "input_text": user_input
                     },
-                    timeout=TIMEOUT
+                    timeout=120
                 )
 
                 data = response.json()
