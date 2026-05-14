@@ -1,5 +1,6 @@
 import os
 import smtplib
+import ssl
 
 from email.mime.text import MIMEText
 
@@ -11,6 +12,9 @@ from database import (
     Contact
 )
 
+
+# LOAD ENV
+
 load_dotenv()
 
 EMAIL_USER = os.getenv("EMAIL_USER")
@@ -18,9 +22,7 @@ EMAIL_USER = os.getenv("EMAIL_USER")
 EMAIL_PASS = os.getenv("EMAIL_PASS")
 
 
-# =========================
 # SEND EMAIL
-# =========================
 
 def send_email(person, content):
 
@@ -28,14 +30,35 @@ def send_email(person, content):
 
     try:
 
+        print("SEND EMAIL START")
+
+        if not EMAIL_USER or not EMAIL_PASS:
+
+            return (
+                "Email failed: "
+                "EMAIL_USER or EMAIL_PASS missing"
+            )
+
         if not person:
 
-            return "Email failed: No recipient provided"
+            return (
+                "Email failed: "
+                "No recipient provided"
+            )
 
-        normalized_person = person.strip().lower()
+        normalized_person = (
+            person.strip().lower()
+        )
+
+        print(
+            "SEARCHING CONTACT:",
+            normalized_person
+        )
 
         contact = db.query(Contact).filter(
-            Contact.name.ilike(f"%{normalized_person}%")
+            Contact.name.ilike(
+                f"%{normalized_person}%"
+            )
         ).first()
 
         if not contact:
@@ -47,49 +70,72 @@ def send_email(person, content):
 
         to_email = contact.email
 
-        if not to_email:
-
-            return (
-                f"Email failed: "
-                f"No email found for {person}"
-            )
+        print(
+            "EMAIL FOUND:",
+            to_email
+        )
 
         msg = MIMEText(content)
 
-        msg["Subject"] = "Automated Message"
+        msg["Subject"] = (
+            "AI Operations Agent Notification"
+        )
 
         msg["From"] = EMAIL_USER
 
         msg["To"] = to_email
 
+        context = ssl.create_default_context()
+
+        print("CONNECTING SMTP")
+
         with smtplib.SMTP(
             "smtp.gmail.com",
-            587
+            587,
+            timeout=20
         ) as server:
 
-            server.starttls()
+            server.ehlo()
+
+            server.starttls(
+                context=context
+            )
+
+            server.ehlo()
+
+            print("SMTP LOGIN")
 
             server.login(
                 EMAIL_USER,
                 EMAIL_PASS
             )
 
+            print("SENDING EMAIL")
+
             server.send_message(msg)
+
+        print("EMAIL SUCCESS")
 
         return f"Email sent to {to_email}"
 
     except Exception as e:
 
-        return f"Email failed: {str(e)}"
+        print(
+            "SEND EMAIL ERROR:",
+            str(e)
+        )
+
+        return (
+            f"Email failed: "
+            f"{str(e)}"
+        )
 
     finally:
 
         db.close()
 
 
-# =========================
 # SCHEDULE MEETING
-# =========================
 
 def schedule_meeting(person, time):
 
@@ -97,12 +143,18 @@ def schedule_meeting(person, time):
 
     try:
 
+        print("SCHEDULE MEETING START")
+
         if not person:
 
             return (
                 "Meeting failed: "
                 "No person provided"
             )
+
+        if not time:
+
+            time = "Not specified"
 
         meeting = Meeting(
             person=person.strip(),
@@ -113,6 +165,8 @@ def schedule_meeting(person, time):
 
         db.commit()
 
+        print("MEETING SUCCESS")
+
         return (
             f"Meeting scheduled with "
             f"{person} at {time}"
@@ -120,7 +174,15 @@ def schedule_meeting(person, time):
 
     except Exception as e:
 
-        return f"Meeting failed: {str(e)}"
+        print(
+            "MEETING ERROR:",
+            str(e)
+        )
+
+        return (
+            f"Meeting failed: "
+            f"{str(e)}"
+        )
 
     finally:
 
