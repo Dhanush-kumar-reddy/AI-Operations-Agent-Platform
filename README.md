@@ -1,6 +1,6 @@
 # AI Operations Agent
 
-An AI-powered workflow orchestration platform built using LangGraph, FastAPI, OpenAI, Streamlit, SQLAlchemy, and LangSmith.
+An AI-powered workflow orchestration platform built using LangGraph, FastAPI, OpenAI, Streamlit, SQLAlchemy, PostgreSQL, LangSmith, and Resend API.
 
 The system converts natural language requests into structured workflows and executes supported operations such as scheduling meetings and sending emails.
 
@@ -13,8 +13,7 @@ This project demonstrates AI workflow orchestration, backend engineering, workfl
 > Add demo video link here
 
 ```text
-Demo Video:
-https://your-demo-link-here
+https://your-demo-video-link
 ```
 
 ---
@@ -24,13 +23,13 @@ https://your-demo-link-here
 ## Streamlit Frontend
 
 ```text
-https://ai-operations-agent-platform-e3w3pzqsr3oqkyff5rny5f.streamlit.app/
+https://your-streamlit-url
 ```
 
 ## FastAPI Backend
 
 ```text
-https://ai-operations-agent-platform-p4cj.onrender.com
+https://your-render-url
 ```
 
 ---
@@ -53,7 +52,7 @@ https://ai-operations-agent-platform-p4cj.onrender.com
 
 - FastAPI backend APIs
 - SQLAlchemy ORM integration
-- SQLite database integration
+- PostgreSQL database integration
 - Contact management APIs
 - Request history tracking
 - Execution metrics tracking
@@ -95,10 +94,10 @@ LangGraph Workflow
   ├── Planner Node (OpenAI)
   ├── Validator Node
   └── Executor Node
-          ├── Email Tool
+          ├── Resend Email Tool
           └── Meeting Scheduler
   ↓
-SQLite Database
+PostgreSQL Database
   ↓
 Logs + LangSmith Tracing
 ```
@@ -121,6 +120,21 @@ Results returned to frontend/API
 
 ---
 
+# Deployment Architecture
+
+```text
+Streamlit Community Cloud
+            ↓
+        FastAPI Backend
+           (Render)
+            ↓
+     PostgreSQL Database
+            ↓
+        Resend API
+```
+
+---
+
 # Tech Stack
 
 ## AI / Agent Frameworks
@@ -135,7 +149,7 @@ Results returned to frontend/API
 
 - FastAPI
 - SQLAlchemy
-- SQLite
+- PostgreSQL
 
 ---
 
@@ -145,11 +159,11 @@ Results returned to frontend/API
 
 ---
 
-## Utilities
+## APIs / Utilities
 
+- Resend API
 - Python Dotenv
 - Requests
-- resend Email Automation
 
 ---
 
@@ -177,7 +191,7 @@ Results returned to frontend/API
 ```json
 {
   "results": [
-    "Email sent to akash@gmail.com"
+    "Email sent successfully"
   ],
   "status": "success",
   "metrics": {
@@ -210,7 +224,6 @@ ai-operations-agent/
 ├── .dockerignore
 ├── .gitignore
 ├── logs.txt
-├── agent.db
 ├── .env
 ├── screenshots/
 └── README.md
@@ -223,8 +236,8 @@ ai-operations-agent/
 ## Clone Repository
 
 ```bash
-git clone https://github.com/Dhanush-kumar-reddy/AI-Operations-Agent-Platform
-cd ai-operations-agent
+git clone <your_repo_url>
+cd AI-Operations-Agent-Platform
 ```
 
 ---
@@ -264,14 +277,13 @@ Create a `.env` file:
 ```env
 OPENAI_API_KEY=your_openai_key
 
-EMAIL_USER=your_email@gmail.com
-EMAIL_PASS=your_email_password
+RESEND_API_KEY=your_resend_api_key
 
 LANGCHAIN_API_KEY=your_langsmith_key
 LANGCHAIN_TRACING_V2=true
 LANGCHAIN_PROJECT=ai-operations-agent
 
-DATABASE_URL=sqlite:///./agent.db
+DATABASE_URL=your_postgresql_database_url
 ```
 
 ---
@@ -416,7 +428,6 @@ Success?
 
 # Future Improvements
 
-- PostgreSQL migration
 - Async background execution
 - Human approval workflows
 - Multi-agent workflows
@@ -429,45 +440,43 @@ Success?
 
 ## Streamlit UI
 
-```text
-screenshots/ui.png
-```
+![UI](screenshots/ui.png)
+
+---
 
 ## Contact Management
 
-```text
-screenshots/contacts.png
-```
+![Contacts](screenshots/contacts.png)
+
+---
 
 ## FastAPI Swagger UI
 
-```text
-screenshots/swagger.png
-```
+![Swagger](screenshots/swagger.png)
+
+---
 
 ## LangSmith Tracing
 
-```text
-screenshots/langsmith.png
-```
+![LangSmith](screenshots/langsmith.png)
 
-## Architecture Diagram
+---
 
-```text
-screenshots/architecture.png
-```
+## System Architecture
+
+![Architecture](screenshots/architecture.png)
+
+---
 
 ## Workflow Diagram
 
-```text
-screenshots/workflow.png
-```
+![Workflow](screenshots/workflow.png)
+
+---
 
 ## Deployment Diagram
 
-```text
-screenshots/deployment.png
-```
+![Deployment](screenshots/deployment.png)
 
 ---
 
@@ -477,6 +486,8 @@ screenshots/deployment.png
 |---|---|
 | FastAPI Backend | Render |
 | Streamlit Frontend | Streamlit Community Cloud |
+| Database | PostgreSQL |
+| Email Service | Resend API |
 
 ---
 
