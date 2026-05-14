@@ -35,15 +35,22 @@ async def home():
 @app.post("/run")
 async def run(input_text: str):
 
+    print("RUN ENDPOINT HIT")
+
     try:
 
-        result = await run_agent(
-            input_text
-        )
+        print("CALLING AGENT")
+
+        # IMPORTANT FIX
+        result = run_agent(input_text)
+
+        print("AGENT FINISHED")
 
         return result
 
     except Exception as e:
+
+        print("RUN ERROR:", str(e))
 
         return {
             "status": "failed",
@@ -66,7 +73,7 @@ async def get_tasks():
 # =========================
 # GET CONTACTS
 # =========================
- 
+
 @app.get("/contacts")
 async def get_contacts():
 
@@ -87,6 +94,13 @@ async def get_contacts():
             ]
         }
 
+    except Exception as e:
+
+        return {
+            "status": "failed",
+            "message": str(e)
+        }
+
     finally:
 
         db.close()
@@ -97,19 +111,22 @@ async def get_contacts():
 # =========================
 
 @app.post("/contacts")
-async def add_contact(name: str, email: str):
+async def add_contact(
+    name: str,
+    email: str
+):
 
     db = SessionLocal()
 
     try:
 
-        normalized_name = name.strip().lower()
+        normalized_name = (
+            name.strip().lower()
+        )
 
-        normalized_email = email.strip().lower()
-
-        # =========================
-        # EMAIL VALIDATION
-        # =========================
+        normalized_email = (
+            email.strip().lower()
+        )
 
         if "@" not in normalized_email:
 
@@ -119,7 +136,9 @@ async def add_contact(name: str, email: str):
             }
 
         existing = db.query(Contact).filter(
-            Contact.name.ilike(normalized_name)
+            Contact.name.ilike(
+                normalized_name
+            )
         ).first()
 
         if existing:
@@ -160,7 +179,9 @@ async def add_contact(name: str, email: str):
 # =========================
 
 @app.delete("/contacts/{contact_id}")
-async def delete_contact(contact_id: int):
+async def delete_contact(
+    contact_id: int
+):
 
     db = SessionLocal()
 
@@ -209,7 +230,9 @@ async def get_meetings():
 
     try:
 
-        meetings = db.query(Meeting).all()
+        meetings = db.query(
+            Meeting
+        ).all()
 
         return {
             "meetings": [
@@ -220,6 +243,13 @@ async def get_meetings():
                 }
                 for m in meetings
             ]
+        }
+
+    except Exception as e:
+
+        return {
+            "status": "failed",
+            "message": str(e)
         }
 
     finally:
