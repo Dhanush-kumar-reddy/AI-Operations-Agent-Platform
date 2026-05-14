@@ -18,6 +18,23 @@ client = AsyncOpenAI(
 
 
 # =========================
+# EXTRACT JSON
+# =========================
+
+def extract_json(text: str):
+
+    start = text.find("{")
+
+    end = text.rfind("}")
+
+    if start == -1 or end == -1:
+
+        return None
+
+    return text[start:end + 1]
+
+
+# =========================
 # NORMALIZE PLAN
 # =========================
 
@@ -100,6 +117,8 @@ Input:
 
     try:
 
+        print("PLANNER START")
+
         response = (
             await client.chat.completions.create(
                 model="gpt-4o-mini",
@@ -109,9 +128,15 @@ Input:
                         "role": "user",
                         "content": prompt
                     }
-                ]
+                ],
+
+                temperature=0,
+
+                timeout=30
             )
         )
+
+        print("OPENAI RESPONSE RECEIVED")
 
         output = (
             response
@@ -121,7 +146,18 @@ Input:
             .strip()
         )
 
-        parsed = json.loads(output)
+        print("RAW OUTPUT:", output)
+
+        json_text = extract_json(output)
+
+        if not json_text:
+
+            return {
+                "tasks": [],
+                "entities": {}
+            }
+
+        parsed = json.loads(json_text)
 
         return normalize_plan(parsed)
 

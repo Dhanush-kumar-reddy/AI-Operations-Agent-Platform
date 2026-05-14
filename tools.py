@@ -35,7 +35,7 @@ def send_email(person, content):
         normalized_person = person.strip().lower()
 
         contact = db.query(Contact).filter(
-            Contact.name.ilike(normalized_person)
+            Contact.name.ilike(f"%{normalized_person}%")
         ).first()
 
         if not contact:

@@ -223,7 +223,7 @@ async def executor_node(state: AgentState):
                     )
 
                 # =========================
-                # EXECUTE TOOL
+                # SCHEDULE MEETING
                 # =========================
 
                 if task == "schedule_meeting":
@@ -241,18 +241,32 @@ async def executor_node(state: AgentState):
                         result
                     )
 
+                    if "failed" in result.lower():
+
+                        log_error(
+                            "SCHEDULE_MEETING_FAILURE",
+                            result
+                        )
+
                     # =========================
-                    # WORKFLOW CHAINING
+                    # SEND CONFIRMATION EMAIL
                     # =========================
 
                     confirmation_result = (
                         await asyncio.to_thread(
                             send_email,
                             entities.get("person"),
-                            (
-                                "Your meeting has been "
-                                "scheduled successfully."
-                            )
+                            f"""
+Hello {entities.get("person")},
+
+Your meeting has been scheduled successfully.
+
+Meeting Time:
+{entities.get("time")}
+
+Regards,
+AI Operations Agent
+"""
                         )
                     )
 
@@ -265,12 +279,35 @@ async def executor_node(state: AgentState):
                         confirmation_result
                     )
 
+                    if (
+                        "failed"
+                        in confirmation_result.lower()
+                    ):
+
+                        log_error(
+                            "CONFIRMATION_EMAIL_FAILURE",
+                            confirmation_result
+                        )
+
+                # =========================
+                # SEND EMAIL
+                # =========================
+
                 elif task == "send_email":
 
                     result = await asyncio.to_thread(
                         tool_fn,
                         entities.get("person"),
-                        "Meeting agenda"
+                        f"""
+Hello {entities.get("person")},
+
+This is an automated notification from the AI Operations Agent.
+
+Your requested workflow has been processed successfully.
+
+Regards,
+AI Operations Agent
+"""
                     )
 
                     results.append(result)
@@ -279,6 +316,17 @@ async def executor_node(state: AgentState):
                         "TASK_SUCCESS_send_email",
                         result
                     )
+
+                    if "failed" in result.lower():
+
+                        log_error(
+                            "SEND_EMAIL_FAILURE",
+                            result
+                        )
+
+                # =========================
+                # UNKNOWN TASK
+                # =========================
 
                 else:
 
@@ -289,14 +337,8 @@ async def executor_node(state: AgentState):
 
                     results.append(result)
 
-                # =========================
-                # FAILURE DETECTION
-                # =========================
-
-                if "failed" in result.lower():
-
                     log_error(
-                        f"{task.upper()}_FAILURE",
+                        "UNKNOWN_TASK",
                         result
                     )
 
@@ -466,14 +508,19 @@ async def run_agent(user_input: str):
 
         app = build_graph()
 
-        result = await app.ainvoke({
-            "user_input": user_input,
-            "plan": {},
-            "results": [],
-            "status": "",
-            "metrics": {},
-            "execution_time_seconds": 0
-        })
+        result = await asyncio.wait_for(
+
+            app.ainvoke({
+                "user_input": user_input,
+                "plan": {},
+                "results": [],
+                "status": "",
+                "metrics": {},
+                "execution_time_seconds": 0
+            }),
+
+            timeout=60
+        )
 
         # =========================
         # STORE HISTORY
@@ -521,6 +568,18 @@ async def run_agent(user_input: str):
         db.commit()
 
         return result
+
+    except asyncio.TimeoutError:
+
+        log_error(
+            "AGENT_TIMEOUT",
+            "Execution timeout"
+        )
+
+        return {
+            "status": "failed",
+            "error": "Execution timeout"
+        }
 
     except Exception as e:
 
