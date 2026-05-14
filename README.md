@@ -1,10 +1,37 @@
 # AI Operations Agent
 
-A production-style AI workflow orchestration platform built using LangGraph, FastAPI, OpenAI, Streamlit, SQLite, and LangSmith.
+An AI-powered workflow orchestration platform built using LangGraph, FastAPI, OpenAI, Streamlit, SQLAlchemy, and LangSmith.
 
-This system converts natural language requests into structured executable workflows and performs automated operations such as scheduling meetings and sending emails.
+The system converts natural language requests into structured workflows and executes supported operations such as scheduling meetings and sending emails.
 
-The project demonstrates AI workflow orchestration, backend engineering, observability, execution tracking, dynamic database-driven tooling, and production-style API architecture.
+This project demonstrates AI workflow orchestration, backend engineering, workflow execution pipelines, observability, execution tracking, database-driven tooling, and production-style API architecture.
+
+---
+
+# Demo Video
+
+> Add demo video link here
+
+```text
+Demo Video:
+https://your-demo-link-here
+```
+
+---
+
+# Live Deployments
+
+## Streamlit Frontend
+
+```text
+https://ai-operations-agent-platform-e3w3pzqsr3oqkyff5rny5f.streamlit.app/
+```
+
+## FastAPI Backend
+
+```text
+https://ai-operations-agent-platform-p4cj.onrender.com
+```
 
 ---
 
@@ -15,10 +42,10 @@ The project demonstrates AI workflow orchestration, backend engineering, observa
 - Natural language task planning using OpenAI
 - LangGraph-based workflow orchestration
 - Planner → Validator → Executor architecture
-- Conditional routing and execution flow
 - Structured task validation
+- Conditional workflow routing
 - Retry and failure handling
-- Dynamic tool execution system
+- Dynamic tool execution
 
 ---
 
@@ -26,10 +53,10 @@ The project demonstrates AI workflow orchestration, backend engineering, observa
 
 - FastAPI backend APIs
 - SQLAlchemy ORM integration
-- SQLite persistence layer
-- Database-driven contact resolution
-- Request audit trail/history
-- Execution metrics and latency tracking
+- SQLite database integration
+- Contact management APIs
+- Request history tracking
+- Execution metrics tracking
 - Structured logging system
 - Dynamic supported tasks API
 
@@ -39,51 +66,57 @@ The project demonstrates AI workflow orchestration, backend engineering, observa
 
 - Streamlit-based interactive UI
 - Contact management interface
-- Sidebar-based navigation
-- Supported task discovery
+- Workflow execution interface
+- Meetings dashboard
 - Execution result visualization
 - Metrics and execution time display
 
 ---
 
-## Observability & Monitoring
+## Observability
 
-- LangSmith tracing and observability
+- LangSmith tracing integration
 - Workflow execution logging
 - Request history tracking
-- Success/failure analytics
+- Success/failure monitoring
 
 ---
 
-## Deployment
-
-- Dockerized deployment setup
-- GitHub-ready project structure
-
----
-
-# Architecture
+# System Architecture
 
 ```text
-User Input
-    ↓
-Streamlit UI / FastAPI API
-    ↓
-Planner (OpenAI)
-    ↓
-Validator
-    ↓
+User
+  ↓
+Streamlit Frontend
+  ↓
+FastAPI Backend
+  ↓
 LangGraph Workflow
+  ├── Planner Node (OpenAI)
+  ├── Validator Node
+  └── Executor Node
+          ├── Email Tool
+          └── Meeting Scheduler
+  ↓
+SQLite Database
+  ↓
+Logs + LangSmith Tracing
+```
+
+---
+
+# Workflow Execution
+
+```text
+User Request
     ↓
-Executor
+Planner extracts tasks/entities
     ↓
-Tool Execution Layer
+Validator filters unsupported tasks
     ↓
-Database / Email Tools
+Executor executes tools
     ↓
-Structured Response
-    ↓
-Request History + Logging + LangSmith Tracing
+Results returned to frontend/API
 ```
 
 ---
@@ -112,30 +145,11 @@ Request History + Logging + LangSmith Tracing
 
 ---
 
-## Deployment
-
-- Docker
-
----
-
 ## Utilities
 
 - Python Dotenv
 - Requests
-- SMTP Email Automation
-
----
-
-# Workflow
-
-1. User enters a natural language request
-2. Planner converts request into structured JSON
-3. Validator filters unsupported tasks
-4. LangGraph routes workflow execution
-5. Executor dynamically triggers tools
-6. Tools perform actions
-7. Metrics, execution logs, and request history are stored
-8. Results are returned to UI/API
+- resend Email Automation
 
 ---
 
@@ -162,16 +176,6 @@ Request History + Logging + LangSmith Tracing
 
 ```json
 {
-  "user_input": "Send email to Akash",
-  "plan": {
-    "tasks": [
-      "send_email"
-    ],
-    "entities": {
-      "person": "Akash",
-      "time": ""
-    }
-  },
   "results": [
     "Email sent to akash@gmail.com"
   ],
@@ -189,7 +193,7 @@ Request History + Logging + LangSmith Tracing
 # Project Structure
 
 ```text
-ai-agent-system/
+ai-operations-agent/
 │
 ├── agent.py
 ├── planner.py
@@ -219,8 +223,8 @@ ai-agent-system/
 ## Clone Repository
 
 ```bash
-git clone <your_repo_url>
-cd ai-agent-system
+git clone https://github.com/Dhanush-kumar-reddy/AI-Operations-Agent-Platform
+cd ai-operations-agent
 ```
 
 ---
@@ -261,11 +265,13 @@ Create a `.env` file:
 OPENAI_API_KEY=your_openai_key
 
 EMAIL_USER=your_email@gmail.com
-EMAIL_PASS=your_gmail_app_password
+EMAIL_PASS=your_email_password
 
 LANGCHAIN_API_KEY=your_langsmith_key
 LANGCHAIN_TRACING_V2=true
 LANGCHAIN_PROJECT=ai-operations-agent
+
+DATABASE_URL=sqlite:///./agent.db
 ```
 
 ---
@@ -276,7 +282,7 @@ LANGCHAIN_PROJECT=ai-operations-agent
 uvicorn main:app --reload
 ```
 
-Open Swagger UI:
+Swagger UI:
 
 ```text
 http://127.0.0.1:8000/docs
@@ -312,21 +318,20 @@ python check_history.py
 
 # Contact Management
 
-The Streamlit UI includes a contact management system.
+The Streamlit UI supports dynamic contact management.
 
 Users can:
 
-- Add contacts dynamically
-- View stored contacts
-- Use contacts immediately in workflows
+- Add contacts
+- View contacts
+- Delete contacts
+- Use stored contacts in workflows
 
 Example:
 
-1. Add:
-   - John → john@gmail.com
-
-2. Run:
-   - Send email to John
+```text
+Send email to Rahul
+```
 
 ---
 
@@ -340,6 +345,7 @@ Example:
 | /contacts | GET | Fetch contacts |
 | /contacts | POST | Add contact |
 | /contacts/{id} | DELETE | Delete contact |
+| /meetings | GET | Fetch meetings |
 
 ---
 
@@ -356,20 +362,24 @@ The system tracks:
 
 ---
 
-# Docker
+# Retry Workflow
 
-## Build Docker Image
+The executor includes retry handling for failed executions.
 
-```bash
-docker build -t ai-agent .
-```
-
----
-
-## Run Docker Container
-
-```bash
-docker run -p 8000:8000 --env-file .env ai-agent
+```text
+Task
+  ↓
+Execute
+  ↓
+Success?
+ ├── Yes → Complete
+ └── No
+        ↓
+      Retry 1
+        ↓
+      Retry 2
+        ↓
+      Failure
 ```
 
 ---
@@ -378,43 +388,38 @@ docker run -p 8000:8000 --env-file .env ai-agent
 
 - Schedule meetings
 - Send emails
-- Dynamic contact management
+- Contact management
+- Workflow execution tracking
 - Request history storage
-- Workflow audit trails
-- Retry failed executions
-- Execution metrics tracking
-- Execution latency monitoring
+- Retry handling
+- Metrics tracking
 - LangSmith tracing
 - Structured validation
-- Dynamic task discovery
-- Production-style API responses
+- Dynamic task routing
 
 ---
 
 # Key Engineering Concepts Demonstrated
 
 - AI workflow orchestration
-- LLM planning systems
 - LangGraph state management
+- LLM planning systems
 - Structured validation pipelines
-- Retry and failure handling
-- Dynamic tool routing
+- Retry handling
+- Dynamic tool execution
 - Database-driven entity resolution
-- Persistent audit trails
 - Execution observability
-- Production-style API design
-- CRUD operations
+- REST API development
 - Full-stack AI application architecture
 
 ---
 
 # Future Improvements
 
-- Multi-agent workflows
 - PostgreSQL migration
-- Async task execution
-- Role-based tool permissions
+- Async background execution
 - Human approval workflows
+- Multi-agent workflows
 - Vector memory / RAG integration
 - Kubernetes deployment
 
@@ -424,28 +429,15 @@ docker run -p 8000:8000 --env-file .env ai-agent
 
 ## Streamlit UI
 
-![Streamlit UI](screenshots/tasks_page.png)
-![Streamlit UI](screenshots/contacts_page.png)
-
----
-
-## FastAPI Swagger Docs
-
-![Swagger UI](screenshots/api_run.png)
-
----
-
-## LangSmith Tracing
-
-![LangSmith](screenshots/langsmith.png)
-
-## Streamlit UI
-
 ```text
 screenshots/ui.png
 ```
 
----
+## Contact Management
+
+```text
+screenshots/contacts.png
+```
 
 ## FastAPI Swagger UI
 
@@ -453,20 +445,38 @@ screenshots/ui.png
 screenshots/swagger.png
 ```
 
----
-
-## LangSmith Traces
+## LangSmith Tracing
 
 ```text
 screenshots/langsmith.png
 ```
 
+## Architecture Diagram
+
+```text
+screenshots/architecture.png
+```
+
+## Workflow Diagram
+
+```text
+screenshots/workflow.png
+```
+
+## Deployment Diagram
+
+```text
+screenshots/deployment.png
+```
+
 ---
 
-# Deployment Targets
+# Deployment
 
-- FastAPI Backend → Render
-- Streamlit Frontend → Streamlit Community Cloud
+| Service | Platform |
+|---|---|
+| FastAPI Backend | Render |
+| Streamlit Frontend | Streamlit Community Cloud |
 
 ---
 
