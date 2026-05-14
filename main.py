@@ -2,7 +2,11 @@ from fastapi import FastAPI
 
 from agent import run_agent
 
-from database import SessionLocal, Contact
+from database import (
+    SessionLocal,
+    Contact,
+    Meeting
+)
 
 app = FastAPI()
 
@@ -17,7 +21,7 @@ SUPPORTED_TASKS = {
 # =========================
 
 @app.get("/")
-def home():
+async def home():
 
     return {
         "message": "AI Agent is running"
@@ -29,11 +33,22 @@ def home():
 # =========================
 
 @app.post("/run")
-def run(input_text: str):
+async def run(input_text: str):
 
-    result = run_agent(input_text)
+    try:
 
-    return result
+        result = await run_agent(
+            input_text
+        )
+
+        return result
+
+    except Exception as e:
+
+        return {
+            "status": "failed",
+            "message": str(e)
+        }
 
 
 # =========================
@@ -41,7 +56,7 @@ def run(input_text: str):
 # =========================
 
 @app.get("/tasks")
-def get_tasks():
+async def get_tasks():
 
     return {
         "supported_tasks": SUPPORTED_TASKS
@@ -53,24 +68,28 @@ def get_tasks():
 # =========================
 
 @app.get("/contacts")
-def get_contacts():
+async def get_contacts():
 
     db = SessionLocal()
 
-    contacts = db.query(Contact).all()
+    try:
 
-    db.close()
+        contacts = db.query(Contact).all()
 
-    return {
-        "contacts": [
-            {
-                "id": c.id,
-                "name": c.name,
-                "email": c.email
-            }
-            for c in contacts
-        ]
-    }
+        return {
+            "contacts": [
+                {
+                    "id": c.id,
+                    "name": c.name,
+                    "email": c.email
+                }
+                for c in contacts
+            ]
+        }
+
+    finally:
+
+        db.close()
 
 
 # =========================
@@ -78,36 +97,62 @@ def get_contacts():
 # =========================
 
 @app.post("/contacts")
-def add_contact(name: str, email: str):
+async def add_contact(name: str, email: str):
 
     db = SessionLocal()
 
-    existing = db.query(Contact).filter(
-        Contact.name.ilike(name.strip())
-    ).first()
+    try:
 
-    if existing:
+        normalized_name = name.strip().lower()
 
-        db.close()
+        normalized_email = email.strip().lower()
+
+        # =========================
+        # EMAIL VALIDATION
+        # =========================
+
+        if "@" not in normalized_email:
+
+            return {
+                "status": "failed",
+                "message": "Invalid email address"
+            }
+
+        existing = db.query(Contact).filter(
+            Contact.name.ilike(normalized_name)
+        ).first()
+
+        if existing:
+
+            return {
+                "status": "failed",
+                "message": "Contact already exists"
+            }
+
+        contact = Contact(
+            name=normalized_name,
+            email=normalized_email
+        )
+
+        db.add(contact)
+
+        db.commit()
 
         return {
-            "message": "Contact already exists"
+            "status": "success",
+            "message": "Contact added successfully"
         }
 
-    contact = Contact(
-        name=name.strip(),
-        email=email.strip()
-    )
+    except Exception as e:
 
-    db.add(contact)
+        return {
+            "status": "failed",
+            "message": str(e)
+        }
 
-    db.commit()
+    finally:
 
-    db.close()
-
-    return {
-        "message": "Contact added successfully"
-    }
+        db.close()
 
 
 # =========================
@@ -115,28 +160,68 @@ def add_contact(name: str, email: str):
 # =========================
 
 @app.delete("/contacts/{contact_id}")
-def delete_contact(contact_id: int):
+async def delete_contact(contact_id: int):
 
     db = SessionLocal()
 
-    contact = db.query(Contact).filter(
-        Contact.id == contact_id
-    ).first()
+    try:
 
-    if not contact:
+        contact = db.query(Contact).filter(
+            Contact.id == contact_id
+        ).first()
+
+        if not contact:
+
+            return {
+                "status": "failed",
+                "message": "Contact not found"
+            }
+
+        db.delete(contact)
+
+        db.commit()
+
+        return {
+            "status": "success",
+            "message": "Contact deleted successfully"
+        }
+
+    except Exception as e:
+
+        return {
+            "status": "failed",
+            "message": str(e)
+        }
+
+    finally:
 
         db.close()
 
+
+# =========================
+# GET MEETINGS
+# =========================
+
+@app.get("/meetings")
+async def get_meetings():
+
+    db = SessionLocal()
+
+    try:
+
+        meetings = db.query(Meeting).all()
+
         return {
-            "message": "Contact not found"
+            "meetings": [
+                {
+                    "id": m.id,
+                    "person": m.person,
+                    "time": m.time
+                }
+                for m in meetings
+            ]
         }
 
-    db.delete(contact)
+    finally:
 
-    db.commit()
-
-    db.close()
-
-    return {
-        "message": "Contact deleted successfully"
-    }
+        db.close()

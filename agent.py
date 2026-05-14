@@ -1,177 +1,375 @@
-from langsmith import traceable
-from langgraph.graph import StateGraph
-from models import AgentState
-from planner import plan_task
-from tools import schedule_meeting, send_email
-from logger import log_step, log_error
 import time
+import asyncio
+
+from langsmith import traceable
+
+from langgraph.graph import StateGraph
+
+from models import AgentState
+
+from planner import plan_task
+
+from tools import (
+    schedule_meeting,
+    send_email
+)
+
+from logger import (
+    log_step,
+    log_error
+)
+
 from database import (
     SessionLocal,
     RequestHistory
 )
 
-# Tool registry (IMPORTANT UPGRADE)
+
+# =========================
+# TOOL REGISTRY
+# =========================
+
 TOOLS = {
     "schedule_meeting": schedule_meeting,
     "send_email": send_email
 }
 
 
-# 🔹 Planner Node
+# =========================
+# PLANNER NODE
+# =========================
+
 @traceable(name="planner_node")
-def planner_node(state: AgentState):
+async def planner_node(state: AgentState):
+
     try:
-        log_step("INPUT", state["user_input"])
 
-        plan = plan_task(state["user_input"])
+        user_input = state.get(
+            "user_input",
+            ""
+        )
 
-        log_step("PLANNER_OUTPUT", plan)
+        log_step(
+            "INPUT",
+            user_input
+        )
 
-        return {"plan": plan}
+        plan = await plan_task(
+            user_input
+        )
+
+        log_step(
+            "PLANNER_OUTPUT",
+            plan
+        )
+
+        return {
+            "plan": plan
+        }
 
     except Exception as e:
-        log_error("PLANNER", str(e))
-        return {"plan": {"tasks": [], "entities": {}}}
+
+        log_error(
+            "PLANNER_ERROR",
+            str(e)
+        )
+
+        return {
+            "plan": {
+                "tasks": [],
+                "entities": {}
+            }
+        }
 
 
-# 🔹 Validator Node
+# =========================
+# VALIDATOR NODE
+# =========================
+
 @traceable(name="validator_node")
-def validator_node(state: AgentState):
+async def validator_node(state: AgentState):
+
     try:
-        plan = state.get("plan", {})
-        log_step("VALIDATION_INPUT", plan)
 
-        valid_tasks = set(TOOLS.keys())
+        plan = state.get(
+            "plan",
+            {}
+        )
 
-        tasks = plan.get("tasks", [])
-        entities = plan.get("entities", {})
+        log_step(
+            "VALIDATION_INPUT",
+            plan
+        )
 
-        filtered_tasks = [t for t in tasks if t in valid_tasks]
+        valid_tasks = set(
+            TOOLS.keys()
+        )
+
+        tasks = plan.get(
+            "tasks",
+            []
+        )
+
+        entities = plan.get(
+            "entities",
+            {}
+        )
+
+        filtered_tasks = [
+            task
+            for task in tasks
+            if task in valid_tasks
+        ]
 
         validated_plan = {
             "tasks": filtered_tasks,
             "entities": entities
         }
 
-        log_step("VALIDATION_OUTPUT", validated_plan)
+        log_step(
+            "VALIDATION_OUTPUT",
+            validated_plan
+        )
 
-        return {"plan": validated_plan}
+        return {
+            "plan": validated_plan
+        }
 
     except Exception as e:
-        log_error("VALIDATOR", str(e))
-        return {"plan": {"tasks": [], "entities": {}}}
 
-def no_action_node(state: AgentState):
+        log_error(
+            "VALIDATOR_ERROR",
+            str(e)
+        )
+
+        return {
+            "plan": {
+                "tasks": [],
+                "entities": {}
+            }
+        }
+
+
+# =========================
+# NO ACTION NODE
+# =========================
+
+async def no_action_node(state: AgentState):
+
+    log_step(
+        "NO_ACTION",
+        state.get("user_input")
+    )
+
     return {
         "results": [],
-
         "status": "no_action",
-
         "metrics": {
             "success": 0,
             "failure": 0
         },
-
         "execution_time_seconds": 0
     }
-    
-    
-# 🔹 Executor Node
+
+
+# =========================
+# EXECUTOR NODE
+# =========================
+
 @traceable(name="executor_node")
-def executor_node(state: AgentState):
-    tasks = state["plan"].get("tasks", [])
-    entities = state["plan"].get("entities", {})
+async def executor_node(state: AgentState):
+
+    tasks = state.get(
+        "plan",
+        {}
+    ).get(
+        "tasks",
+        []
+    )
+
+    entities = state.get(
+        "plan",
+        {}
+    ).get(
+        "entities",
+        {}
+    )
 
     results = []
+
     start_time = time.time()
 
-    log_step("EXECUTION_START", state["plan"])
+    log_step(
+        "EXECUTION_START",
+        state.get("plan")
+    )
 
     for task in tasks:
+
         retry = 0
+
         success = False
 
         while retry < 2 and not success:
+
             try:
+
                 tool_fn = TOOLS.get(task)
 
                 if not tool_fn:
-                    raise Exception("Invalid tool")
 
-                # ✅ Execute correct tool
+                    raise Exception(
+                        "Invalid tool"
+                    )
+
+                # =========================
+                # EXECUTE TOOL
+                # =========================
+
                 if task == "schedule_meeting":
-                    result = tool_fn(
+
+                    result = await asyncio.to_thread(
+                        tool_fn,
                         entities.get("person"),
                         entities.get("time")
                     )
 
+                    results.append(result)
+
+                    log_step(
+                        "TASK_SUCCESS_schedule_meeting",
+                        result
+                    )
+
+                    # =========================
+                    # WORKFLOW CHAINING
+                    # =========================
+
+                    confirmation_result = (
+                        await asyncio.to_thread(
+                            send_email,
+                            entities.get("person"),
+                            (
+                                "Your meeting has been "
+                                "scheduled successfully."
+                            )
+                        )
+                    )
+
+                    results.append(
+                        confirmation_result
+                    )
+
+                    log_step(
+                        "CONFIRMATION_EMAIL",
+                        confirmation_result
+                    )
+
                 elif task == "send_email":
-                    result = tool_fn(
+
+                    result = await asyncio.to_thread(
+                        tool_fn,
                         entities.get("person"),
                         "Meeting agenda"
                     )
 
-                else:
-                    result = f"Failed: Unknown task {task}"
+                    results.append(result)
 
-                # ✅ Detect logical failures
+                    log_step(
+                        "TASK_SUCCESS_send_email",
+                        result
+                    )
+
+                else:
+
+                    result = (
+                        f"Failed: "
+                        f"Unknown task {task}"
+                    )
+
+                    results.append(result)
+
+                # =========================
+                # FAILURE DETECTION
+                # =========================
+
                 if "failed" in result.lower():
-                    log_error(f"{task.upper()}_FAILURE", result)
 
-                else:
-                    log_step(f"TASK_SUCCESS_{task}", result)
-
-                # ✅ Store result
-                results.append(result)
+                    log_error(
+                        f"{task.upper()}_FAILURE",
+                        result
+                    )
 
                 success = True
 
             except Exception as e:
+
                 retry += 1
 
-                log_error(f"TASK_FAIL_{task}", str(e))
+                log_error(
+                    f"{task.upper()}_RETRY_{retry}",
+                    str(e)
+                )
 
                 if retry == 2:
-                    failure_message = f"Failed: {task}"
 
-                    results.append(failure_message)
+                    failure_message = (
+                        f"Failed: {task}"
+                    )
+
+                    results.append(
+                        failure_message
+                    )
 
                     log_error(
                         f"{task.upper()}_FINAL_FAILURE",
                         failure_message
                     )
 
-    log_step("EXECUTION_RESULT", results)
+    # =========================
+    # METRICS
+    # =========================
 
-    # ✅ Metrics
     success_count = sum(
-        1 for r in results if "failed" not in r.lower()
+        1
+        for result in results
+        if "failed" not in result.lower()
     )
 
-    failure_count = len(results) - success_count
+    failure_count = (
+        len(results) - success_count
+    )
 
-    # ✅ Status
-    status = "success"
+    # =========================
+    # STATUS
+    # =========================
 
-    if failure_count > 0:
-        status = (
-            "partial"
-            if success_count > 0
-            else "failed"
-        )
+    if not tasks:
+
+        status = "no_action"
+
+    elif failure_count == 0:
+
+        status = "success"
+
+    elif success_count > 0:
+
+        status = "partial"
+
+    else:
+
+        status = "failed"
 
     execution_time = round(
         time.time() - start_time,
         2
     )
-    log_step("EXECUTION_TIME", execution_time)
-    
-    if not tasks:
-        status = "no_action"
 
-        success_count = 0
-        failure_count = 0
-    
+    log_step(
+        "EXECUTION_TIME",
+        execution_time
+    )
+
     return {
         "results": results,
         "status": status,
@@ -182,26 +380,66 @@ def executor_node(state: AgentState):
         "execution_time_seconds": execution_time
     }
 
-# 🔹 Routing
+
+# =========================
+# ROUTING
+# =========================
+
 def route(state: AgentState):
-    if not state["plan"].get("tasks"):
+
+    tasks = state.get(
+        "plan",
+        {}
+    ).get(
+        "tasks",
+        []
+    )
+
+    if not tasks:
+
         return "no_action"
 
     return "executor"
 
 
-# 🔹 Graph
+# =========================
+# BUILD GRAPH
+# =========================
+
 def build_graph():
-    graph = StateGraph(AgentState)
 
-    graph.add_node("no_action", no_action_node)
-    graph.add_node("planner", planner_node)
-    graph.add_node("validator", validator_node)
-    graph.add_node("executor", executor_node)
+    graph = StateGraph(
+        AgentState
+    )
 
-    graph.set_entry_point("planner")
+    graph.add_node(
+        "planner",
+        planner_node
+    )
 
-    graph.add_edge("planner", "validator")
+    graph.add_node(
+        "validator",
+        validator_node
+    )
+
+    graph.add_node(
+        "executor",
+        executor_node
+    )
+
+    graph.add_node(
+        "no_action",
+        no_action_node
+    )
+
+    graph.set_entry_point(
+        "planner"
+    )
+
+    graph.add_edge(
+        "planner",
+        "validator"
+    )
 
     graph.add_conditional_edges(
         "validator",
@@ -215,51 +453,66 @@ def build_graph():
     return graph.compile()
 
 
-# 🔹 Run Agent
+# =========================
+# RUN AGENT
+# =========================
+
 @traceable(name="run_agent")
-def run_agent(user_input: str):
+async def run_agent(user_input: str):
+
+    db = SessionLocal()
+
     try:
+
         app = build_graph()
 
-        # ✅ Run graph
-        result = app.invoke({
+        result = await app.ainvoke({
             "user_input": user_input,
-
             "plan": {},
-
             "results": [],
-
             "status": "",
-
             "metrics": {},
-
             "execution_time_seconds": 0
         })
 
-        # Save request history
-        db = SessionLocal()
+        # =========================
+        # STORE HISTORY
+        # =========================
 
         history = RequestHistory(
             user_input=user_input,
 
-            plan=str(result.get("plan")),
+            plan=str(
+                result.get("plan")
+            ),
 
-            results=str(result.get("results")),
+            results=str(
+                result.get("results")
+            ),
 
-            status=result.get("status"),
+            status=result.get(
+                "status"
+            ),
 
             success_count=result.get(
-                "metrics", {}
-            ).get("success", 0),
+                "metrics",
+                {}
+            ).get(
+                "success",
+                0
+            ),
 
             failure_count=result.get(
-                "metrics", {}
-            ).get("failure", 0),
+                "metrics",
+                {}
+            ).get(
+                "failure",
+                0
+            ),
 
-            execution_time=str(
-                result.get(
-                    "execution_time_seconds", 0
-                )
+            execution_time=result.get(
+                "execution_time_seconds",
+                0
             )
         )
 
@@ -267,21 +520,50 @@ def run_agent(user_input: str):
 
         db.commit()
 
-        db.close()
-
         return result
 
     except Exception as e:
-        log_error("AGENT_FATAL", str(e))
+
+        log_error(
+            "AGENT_FATAL",
+            str(e)
+        )
 
         return {
+            "status": "failed",
             "error": "Agent execution failed",
             "details": str(e)
         }
 
+    finally:
 
-# 🔹 Testing
+        db.close()
+
+
+# =========================
+# LOCAL TESTING
+# =========================
+
 if __name__ == "__main__":
-    print(run_agent("Schedule a meeting with Rahul tomorrow"))
-    print(run_agent("Send email to Akash"))
-    print(run_agent("Do something random"))
+
+    async def test():
+
+        print(
+            await run_agent(
+                "Schedule a meeting with Rahul tomorrow"
+            )
+        )
+
+        print(
+            await run_agent(
+                "Send email to Akash"
+            )
+        )
+
+        print(
+            await run_agent(
+                "Do something random"
+            )
+        )
+
+    asyncio.run(test())

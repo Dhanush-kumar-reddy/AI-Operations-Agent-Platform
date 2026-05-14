@@ -1,31 +1,60 @@
 import os
 import json
-from dotenv import load_dotenv
-from openai import OpenAI
 
-# Load environment variables
+from dotenv import load_dotenv
+
+from openai import AsyncOpenAI
+
+
+# =========================
+# LOAD ENV
+# =========================
+
 load_dotenv()
 
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+client = AsyncOpenAI(
+    api_key=os.getenv("OPENAI_API_KEY")
+)
 
 
-# Normalize LLM output (VERY IMPORTANT)
+# =========================
+# NORMALIZE PLAN
+# =========================
+
 def normalize_plan(plan: dict):
-    tasks = plan.get("tasks", [])
 
-    # Fix if tasks come as objects instead of strings
-    if tasks and isinstance(tasks[0], dict):
-        tasks = [t.get("task") for t in tasks if "task" in t]
+    tasks = plan.get(
+        "tasks",
+        []
+    )
 
-    # Ensure tasks is always a list of strings
+    if (
+        tasks
+        and isinstance(tasks[0], dict)
+    ):
+
+        tasks = [
+            task.get("task")
+            for task in tasks
+            if "task" in task
+        ]
+
     if not isinstance(tasks, list):
+
         tasks = []
 
-    tasks = [str(t) for t in tasks]
+    tasks = [str(task) for task in tasks]
 
-    entities = plan.get("entities", {})
+    entities = plan.get(
+        "entities",
+        {}
+    )
 
-    if not isinstance(entities, dict):
+    if not isinstance(
+        entities,
+        dict
+    ):
+
         entities = {}
 
     return {
@@ -34,8 +63,12 @@ def normalize_plan(plan: dict):
     }
 
 
-# 🧠 Main planner function
-def plan_task(user_input: str):
+# =========================
+# PLAN TASK
+# =========================
+
+async def plan_task(user_input: str):
+
     prompt = f"""
 You are an AI planner.
 
@@ -46,14 +79,13 @@ Allowed tasks:
 - send_email
 
 Rules:
-- tasks MUST be a list of strings (NOT objects)
-- Example: ["schedule_meeting"]
-- DO NOT return objects like {{"task": "..."}}
+- tasks MUST be a list of strings
 - Always return valid JSON
-- Do not include explanations
-- If task is unclear → return empty tasks
+- No explanations
+- If unclear → empty tasks
 
 Output format:
+
 {{
   "tasks": ["task_name"],
   "entities": {{
@@ -62,42 +94,62 @@ Output format:
   }}
 }}
 
-If no valid task:
-{{
-  "tasks": [],
-  "entities": {{}}
-}}
-
 Input:
 {user_input}
 """
 
     try:
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "user", "content": prompt}]
+
+        response = (
+            await client.chat.completions.create(
+                model="gpt-4o-mini",
+
+                messages=[
+                    {
+                        "role": "user",
+                        "content": prompt
+                    }
+                ]
+            )
         )
 
-        output = response.choices[0].message.content.strip()
+        output = (
+            response
+            .choices[0]
+            .message
+            .content
+            .strip()
+        )
 
-        # Parse JSON safely
         parsed = json.loads(output)
 
-        # Normalize structure
         return normalize_plan(parsed)
 
     except Exception as e:
-        print("Planner Error:", str(e))
 
-        # Safe fallback
+        print(
+            "Planner Error:",
+            str(e)
+        )
+
         return {
             "tasks": [],
             "entities": {}
         }
 
 
-# 🧪 Testing
+# =========================
+# TESTING
+# =========================
+
 if __name__ == "__main__":
-    print(plan_task("Schedule a meeting with Rahul tomorrow"))
-    print(plan_task("Send email to Akash"))
-    print(plan_task("Do something random"))
+
+    import asyncio
+
+    print(
+        asyncio.run(
+            plan_task(
+                "Schedule a meeting with Rahul tomorrow"
+            )
+        )
+    )
