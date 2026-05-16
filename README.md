@@ -13,7 +13,7 @@ This project demonstrates AI workflow orchestration, backend engineering, workfl
 > Add demo video link here
 
 ```text
-https://your-demo-video-link
+https://drive.google.com/file/d/1dNK5R3y5HP8s6m1Nwe0-qyawW_tefQRU/view?usp=sharing
 ```
 
 ---
@@ -23,13 +23,13 @@ https://your-demo-video-link
 ## Streamlit Frontend
 
 ```text
-https://your-streamlit-url
+https://ai-operations-agent-platform-e3w3pzqsr3oqkyff5rny5f.streamlit.app/
 ```
 
 ## FastAPI Backend
 
 ```text
-https://your-render-url
+https://ai-operations-agent-platform-p4cj.onrender.com
 ```
 
 ---
